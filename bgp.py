@@ -56,47 +56,6 @@ class Router(Switch):
     def log(self, s, col="magenta"):
         print T.colored(s, col)
 
-class CustomTopo(Topo):
-    def __init__(self):
-        super(CustomTopo, self).__init__()
-        num_hosts_per_as = 3
-        # Create the non-Rogue ASes
-        num_ases = 5
-        num_hosts = num_hosts_per_as * num_ases
-        # NOTE: this routers original back indented, but gives error for my code
-        routers = []
-        for i in xrange(num_ases):
-            router = self.addSwitch('R%d' % (i+1))
-        routers.append(router)
-        hosts = []
-        for i in xrange(num_ases):
-            router = 'R%d' % (i+1)
-            for j in xrange(num_hosts_per_as):
-                hostname = 'h%d-%d' % (i+1, j+1)
-                host = self.addNode(hostname)
-                hosts.append(host)
-                self.addLink(router, host)
-
-        # Create links between border routers
-        self.addLink('R1', 'R2')
-        self.addLink('R1', 'R3')
-        self.addLink('R2', 'R3')
-        self.addLink('R2', 'R4')
-        self.addLink('R2', 'R5')
-        self.addLink('R3', 'R5')
-        self.addLink('R3', 'R4')
-        self.addLink('R4', 'R5')
-
-        # Create the Rogue AS
-        routers.append(self.addSwitch('R6'))
-        for j in xrange(num_hosts_per_as):
-            hostname = 'h%d-%d' % (6, j+1)
-            host = self.addNode(hostname)
-            hosts.append(host)
-            self.addLink('R6', hostname)
-        # This MUST be added at the end
-        self.addLink('R5', 'R6')
-        return
 
 class SimpleTopo(Topo):
     """The Autonomous System topology is a simple straight-line topology
@@ -107,7 +66,7 @@ class SimpleTopo(Topo):
         # Add default members to class.
         super(SimpleTopo, self ).__init__()
         num_hosts_per_as = 3
-        num_ases = 3
+        num_ases = 5
         num_hosts = num_hosts_per_as * num_ases
         # The topology has one router per AS
 	routers = []
@@ -122,17 +81,26 @@ class SimpleTopo(Topo):
                 host = self.addNode(hostname)
                 hosts.append(host)
                 self.addLink(router, host)
-        for i in xrange(num_ases-1):
-            self.addLink('R%d' % (i+1), 'R%d' % (i+2))
 
-        routers.append(self.addSwitch('R4'))
+        #for i in xrange(num_ases-1):
+            #self.addLink('R%d' % (i+1), 'R%d' % (i+2))
+        self.addLink('R1','R2')
+        self.addLink('R1','R3')
+        self.addLink('R2','R3')
+        self.addLink('R2','R4')
+        self.addLink('R2','R5')
+        self.addLink('R3','R4')
+        self.addLink('R3','R5')
+        self.addLink('R4','R5')
+
+        routers.append(self.addSwitch('R6'))
         for j in xrange(num_hosts_per_as):
-            hostname = 'h%d-%d' % (4, j+1)
+            hostname = 'h%d-%d' % (6, j+1)
             host = self.addNode(hostname)
             hosts.append(host)
-            self.addLink('R4', hostname)
+            self.addLink('R6', hostname)
         # This MUST be added at the end
-        self.addLink('R1', 'R4')
+        self.addLink('R5', 'R6')
         return
 
 
@@ -141,7 +109,7 @@ def getIP(hostname):
     AS = int(AS)
     if AS == 6:
         AS = 1
-    ip = '%s.0.%s.1/24' % (0+AS, idx)
+    ip = '%s.0.%s.1/24' % (AS, idx)
     return ip
 
 
@@ -152,7 +120,7 @@ def getGateway(hostname):
     # attacker.
     if AS == 6:
         AS = 1
-    gw = '%s.0.%s.254' % (0+AS, idx)
+    gw = '%s.0.%s.254' % (AS, idx)
     return gw
 
 
@@ -167,7 +135,7 @@ def main():
     os.system("killall -9 zebra bgpd > /dev/null 2>&1")
     os.system('pgrep -f webserver.py | xargs kill -9')
 
-    net = Mininet(topo=CustomTopo(), switch=Router)
+    net = Mininet(topo=SimpleTopo(), switch=Router)
     net.start()
     for router in net.switches:
         router.cmd("sysctl -w net.ipv4.ip_forward=1")
